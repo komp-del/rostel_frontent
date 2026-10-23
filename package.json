@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "vite --host 0.0.0.0", "build": "vue-tsc -b && vite build", "preview": "vite preview --host 0.0.0.0", "typecheck": "vue-tsc --noEmit" },
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "typecheck": "vue-tsc --noEmit"
+  },
   "dependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
     "axios": "^1.7.9",
@@ -14,5 +19,14 @@
     "vue-chartjs": "^5.3.2",
     "vue-router": "^4.5.0"
   },
-  "devDependencies": { "typescript": "~5.7.2", "vite": "^6.0.7", "vue-tsc": "^2.2.0" }
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.0.7",
+    "vue-tsc": "^2.2.0"
+  },
+  "allowScripts": {
+    "vue-demi@0.14.10": true,
+    "esbuild@0.25.12": true,
+    "fsevents@2.3.3": true
+  }
 }
