@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import {computed, ref} from 'vue'
 import {BadgeCheck, Calculator, FilePlus2, RotateCcw} from 'lucide-vue-next'
-import {dealsApi, dealsCalculatorApi, proposalsApi} from '../api/client'
+import {dealsApi, dealsCalculatorApi, proposalsApi, projectsApi, downloadCsv} from '../api/client'
+import {onMounted} from 'vue'
 import SectionTitle from '../components/SectionTitle.vue'
 import BaseModal from '../components/BaseModal.vue'
 import {useAppStore} from '../stores/app'
 
 const app = useAppStore()
+const projects = ref<any[]>([]), analogText = ref(''), recentDeals = ref<any[]>([])
+onMounted(async () => { try { const [p,d] = await Promise.all([projectsApi.list({page:1,page_size:100}), dealsApi.list({page:1,page_size:10})]); projects.value=p.items; recentDeals.value=d.items } catch { /* API errors are surfaced by primary actions */ } })
 const form = ref({
   project_id: '',
   name: '',
@@ -48,7 +51,8 @@ function payload() {
     margin_percent: Number(form.value.margin_percent) || 0,
     risk_percent: Number(form.value.risk_percent) || 0,
     competitor_price: form.value.competitor_price === '' ? null : Number(form.value.competitor_price),
-    status: 'calculated'
+    status: 'calculated',
+    analog_prices: analogText.value.split(/[;,\n]+/).map((x:string) => Number(x.trim())).filter((x:number) => Number.isFinite(x) && x >= 0).slice(0, 30)
   }
 }
 
@@ -69,7 +73,10 @@ async function calculate() {
 async function saveDeal() {
   saving.value = true;
   try {
-    result.value = await dealsApi.create(payload());
+    const {analog_prices: _analogPrices, ...dealPayload} = payload();
+    result.value = await dealsApi.create(dealPayload);
+    showResult.value = true;
+    const refreshed = await dealsApi.list({page:1,page_size:10}); recentDeals.value = refreshed.items;
     app.notify('Сделка сохранена в backend')
   } catch (e: any) {
     app.notify(`Не удалось сохранить: ${e.userMessage || 'проверьте API'}`)
@@ -132,9 +139,7 @@ function reset() {
         <form @submit.prevent="calculate">
           <div class="form-grid"><label class="field full"><span>Наименование сделки *</span><input
               v-model="form.name" placeholder="Например, облачная инфраструктура"/><small
-              v-if="errors.name" class="field-error">{{ errors.name }}</small></label><label
-              class="field"><span>ID проекта (необязательно)</span><input v-model="form.project_id" type="number" min="1"
-                                                                          placeholder="ID из backend"/></label><label
+              v-if="errors.name" class="field-error">{{ errors.name }}</small></label><label class="field"><span>Проект (необязательно)</span><select v-model="form.project_id"><option value="">Без привязки</option><option v-for="p in projects" :key="p.id" :value="String(p.id)">#{{ p.id }} · {{ p.name }}</option></select></label><label
               class="field"><span>Стоимость оборудования, ₽</span><input v-model.number="form.equipment_cost" type="number" min="0" step="0.01"/><small
               v-if="errors.equipment_cost" class="field-error">{{ errors.equipment_cost }}</small></label><label
               class="field"><span>Стоимость сервиса, ₽</span><input v-model.number="form.service_cost" type="number" min="0" step="0.01"/><small
@@ -142,8 +147,7 @@ function reset() {
               class="field"><span>Маржа, %</span><input v-model.number="form.margin_percent" type="number" min="0" max="100"/><small
               v-if="errors.margin_percent" class="field-error">{{ errors.margin_percent }}</small></label><label
               class="field"><span>Риски, %</span><input v-model.number="form.risk_percent" type="number" min="0" max="100"/><small
-              v-if="errors.risk_percent" class="field-error">{{ errors.risk_percent }}</small></label><label
-              class="field"><span>Цена конкурента, ₽</span><input v-model.number="form.competitor_price" type="number" min="0" placeholder="Необязательно"/></label>
+              v-if="errors.risk_percent" class="field-error">{{ errors.risk_percent }}</small></label><label class="field"><span>Цена конкурента, ₽</span><input v-model.number="form.competitor_price" type="number" min="0" placeholder="Необязательно"/></label><label class="field full"><span>Цены аналогов, ₽ (через запятую или с новой строки)</span><textarea v-model="analogText" rows="2" placeholder="125000, 138000, 142500"/><small class="auth-hint">Передаются в API расчёта как analog_prices; максимум 30 значений.</small></label>
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" @click="reset">
@@ -176,13 +180,10 @@ function reset() {
             Значения обновляются автоматически
           </div>
         </section>
-        <section class="panel comparison-panel"><h3>Сравнение цен</h3>
-          <p>Введите параметры для расчёта. Сравнение с тарифами и рыночными предложениями подключается через отдельный
-            endpoint backend.</p>
-          <div class="comparison-placeholder">Нет подключённых ценовых ориентиров</div>
-        </section>
+        <section class="panel comparison-panel"><h3>Сравнение цен</h3><p>Цены аналогов учитываются серверным калькулятором при отправке расчёта.</p><div v-if="analogText.trim()" class="comparison-placeholder">{{ analogText.split(/[;,\n]+/).filter((x:string)=>x.trim() && Number.isFinite(Number(x.trim())) && Number(x.trim())>=0).length }} ценовых ориентиров введено</div><div v-else class="comparison-placeholder">Добавьте цены аналогов в форму слева</div></section>
       </aside>
     </div>
+    <section class="panel list-panel deals-recent-panel"><div class="panel-heading"><div><h2>Последние сделки</h2><p>Загружено из API · {{ recentDeals.length }}</p></div><button class="btn btn-secondary btn-sm" @click="downloadCsv('deals').then(()=>app.notify('Экспорт сделок скачан')).catch((e:any)=>app.notify(e.userMessage || 'Ошибка экспорта'))"><FilePlus2 :size="15"/> Экспорт CSV</button></div><div v-if="recentDeals.length" class="recent-deals-list"><div v-for="d in recentDeals" :key="d.id" class="recent-deal-row"><span class="deal-id">#{{ d.id }}</span><div><strong>{{ d.name }}</strong><small>{{ d.status || 'draft' }}</small></div><b>{{ money(Number(d.final_price ?? d.recommended_price ?? (Number(d.equipment_cost || 0) + Number(d.service_cost || 0)))) }}</b></div></div><p v-else class="empty-deals-note">Сделки появятся здесь после сохранения в backend.</p></section>
     <section v-if="showResult" class="panel saved-result">
       <div class="saved-check">
         <BadgeCheck/>

@@ -10,7 +10,7 @@ import BaseModal from '../components/BaseModal.vue'
 import {useAppStore} from '../stores/app'
 
 const app = useAppStore(), rows = ref<any[]>([]), selected = ref<any>(null), loading = ref(false), error = ref(''),
-    search = ref(''), status = ref(''), page = ref(1), pageSize = 10, total = ref(0),
+    search = ref(''), status = ref(''), dealId = ref(''), page = ref(1), pageSize = 10, total = ref(0),
     busyId = ref<string | number | null>(null), confirmDelete = ref<any>(null)
 
 async function load() {
@@ -20,6 +20,7 @@ async function load() {
     const r = await proposalsApi.list({
       search: search.value || undefined,
       status: status.value || undefined,
+      deal_id: dealId.value ? Number(dealId.value) : undefined,
       page: page.value,
       page_size: pageSize
     });
@@ -32,7 +33,7 @@ async function load() {
   }
 }
 
-watch([page, status], load);
+watch([page, status, dealId], load);
 onMounted(load)
 let timer: ReturnType<typeof setTimeout>;
 
@@ -104,7 +105,7 @@ async function remove() {
             <option value="accepted">Принято</option>
             <option value="rejected">Отклонено</option>
             <option value="expired">Просрочено</option>
-          </select></div>
+          </select><input v-model="dealId" class="deal-id-filter" type="number" min="1" placeholder="ID сделки" aria-label="Фильтр по ID сделки" @input="page=1"/></div>
         <div class="toolbar-actions"><button class="btn btn-secondary btn-sm" @click="downloadCsv"><Download :size="15"/> CSV</button><span class="subtle-label">{{ total }} предложений</span></div></div>
       <UiState :loading="loading" :error="error" :empty="!rows.length"
                empty-text="Коммерческие предложения пока не созданы." @retry="load">

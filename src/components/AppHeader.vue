@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import {Bell, ChevronDown, Menu, Search} from 'lucide-vue-next'
+import {Bell, ChevronDown, LogOut, Menu, Search} from 'lucide-vue-next'
 import {useAppStore} from '../stores/app'
 import {useRoute} from 'vue-router'
 
 const app = useAppStore();
 const route = useRoute()
+const emit = defineEmits<{logout: []}>()
 </script>
 <template>
   <header class="topbar">
@@ -19,6 +20,7 @@ const route = useRoute()
       <button class="icon-button notification-button" aria-label="Уведомления">
         <Bell :size="19"/>
         <i></i></button>
+      <button class="btn btn-secondary btn-sm header-logout" @click="emit('logout')"><LogOut :size="15"/><span>Выйти</span></button>
       <div class="profile">
         <div class="avatar">КБ</div>
         <div class="profile-text"><strong>Коммерческий блок</strong><small>Администратор</small></div>

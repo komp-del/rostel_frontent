@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {useRoute} from 'vue-router'
-import {BriefcaseBusiness, Calculator, Files, LayoutDashboard, Radar, RadioTower, X} from 'lucide-vue-next'
+import {BriefcaseBusiness, Calculator, Files, LayoutDashboard, Radar, RadioTower, ShieldCheck, X} from 'lucide-vue-next'
 import {useAppStore} from '../stores/app'
 
 const route = useRoute();
@@ -10,7 +10,8 @@ const links = [
   {to: '/companies', label: 'Радар присутствия', icon: Radar},
   {to: '/projects', label: 'Инвестиционный навигатор', icon: BriefcaseBusiness},
   {to: '/deals', label: 'Калькулятор сделок', icon: Calculator},
-  {to: '/proposals', label: 'Коммерческие предложения', icon: Files}
+  {to: '/proposals', label: 'Коммерческие предложения', icon: Files},
+  {to: '/security', label: 'Безопасность аккаунта', icon: ShieldCheck}
 ]
 </script>
 <template>

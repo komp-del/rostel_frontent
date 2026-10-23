@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import {onMounted, ref, watch} from 'vue'
-import {Building2, MapPin, Pencil, Plus, Search, SlidersHorizontal, Trash2, TrendingUp, X} from 'lucide-vue-next'
-import {companiesApi} from '../api/client'
+import {Building2, Download, MapPin, Pencil, Plus, Search, SlidersHorizontal, Trash2, TrendingUp, X} from 'lucide-vue-next'
+import {companiesApi, downloadCsv} from '../api/client'
+import {useAppStore} from '../stores/app'
 import SectionTitle from '../components/SectionTitle.vue'
 import UiState from '../components/UiState.vue'
 import PaginationBar from '../components/PaginationBar.vue'
 import BaseModal from '../components/BaseModal.vue'
 
+const app = useAppStore()
 const rows = ref<any[]>([]), selected = ref<any>(null), loading = ref(false), error = ref(''), total = ref(0),
-    page = ref(1), pageSize = 10, search = ref(''), region = ref(''), industry = ref(''), revenueMin = ref(''),
-    revenueMax = ref(''), growthMin = ref(''), editing = ref(false), saving = ref(false), confirmDelete = ref(false)
+    page = ref(1), pageSize = 10, search = ref(''), region = ref(''), industry = ref(''), potentialOnly = ref(false), editing = ref(false), saving = ref(false), confirmDelete = ref(false)
 const companyForm = ref<any>({})
 let debounce: ReturnType<typeof setTimeout>
 
@@ -21,9 +22,7 @@ async function load() {
       search: search.value || undefined,
       region: region.value || undefined,
       industry: industry.value || undefined,
-      revenue_min: revenueMin.value || undefined,
-      revenue_max: revenueMax.value || undefined,
-      growth_min: growthMin.value || undefined,
+      potential_only: potentialOnly.value || undefined,
       page: page.value,
       page_size: pageSize
     });
@@ -43,7 +42,7 @@ function delayed() {
 }
 
 function clear() {
-  search.value = region.value = industry.value = revenueMin.value = revenueMax.value = growthMin.value = '';
+  search.value = region.value = industry.value = ''; potentialOnly.value = false;
   page.value = 1;
   load()
 }
@@ -94,23 +93,16 @@ async function deleteCompany() {
         </button>
       </div>
       <div class="filters-grid"><label class="field search-field"><span>Поиск</span>
-        <div class="input-icon">
-          <Search/>
-          <input v-model="search" placeholder="Название, ИНН или ключевое слово" @input="delayed"/></div>
-      </label><label class="field"><span>Регион</span><input v-model="region" placeholder="Например, Москва"
-                                                             @input="delayed"/></label><label class="field"><span>Отрасль</span><input
-          v-model="industry" placeholder="Отрасль" @input="delayed"/></label><label
-          class="field"><span>Выручка от, ₽</span><input v-model="revenueMin" type="number" min="0" placeholder="0"
-                                                         @change="delayed"/></label><label class="field"><span>Выручка до, ₽</span><input
-          v-model="revenueMax" type="number" min="0" placeholder="Без ограничений" @change="delayed"/></label><label
-          class="field"><span>Рост от, %</span><input v-model="growthMin" type="number" placeholder="0"
-                                                      @change="delayed"/></label></div>
+        <div class="input-icon"><Search/><input v-model="search" placeholder="Название, ИНН или ключевое слово" @input="delayed"/></div>
+      </label><label class="field"><span>Регион</span><input v-model="region" placeholder="Например, Москва" @input="delayed"/></label>
+      <label class="field"><span>Отрасль</span><input v-model="industry" placeholder="Отрасль" @input="delayed"/></label>
+      <label class="field checkbox-field potential-filter"><input v-model="potentialOnly" type="checkbox" @change="delayed"/> Только потенциальные клиенты</label></div>
     </section>
     <section class="panel list-panel">
       <div class="panel-heading">
         <div><h2>Компании</h2>
           <p>Найдено: {{ total.toLocaleString('ru-RU') }}</p></div>
-        <div class="toolbar-actions"><button class="btn btn-primary btn-sm" @click="openCreate"><Plus :size="15"/> Компания</button><span class="subtle-label">Реестр организаций</span></div></div>
+        <div class="toolbar-actions"><button class="btn btn-secondary btn-sm" @click="downloadCsv('companies').then(()=>app.notify('Экспорт компаний скачан')).catch((e:any)=>app.notify(e.userMessage || 'Ошибка экспорта'))"><Download :size="15"/> CSV</button><button class="btn btn-primary btn-sm" @click="openCreate"><Plus :size="15"/> Компания</button><span class="subtle-label">Реестр организаций</span></div></div>
       <UiState :loading="loading" :error="error" :empty="!rows.length"
                empty-text="По заданным параметрам компании не найдены." @retry="load">
         <div class="company-grid">

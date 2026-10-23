@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import {onMounted, ref, watch} from 'vue'
-import {BriefcaseBusiness, CalendarDays, MapPin, Pencil, Plus, Search, Trash2, X} from 'lucide-vue-next'
-import {projectsApi} from '../api/client'
+import {BriefcaseBusiness, CalendarDays, Download, MapPin, Pencil, Plus, Search, Trash2, X} from 'lucide-vue-next'
+import {projectsApi, downloadCsv} from '../api/client'
+import {useAppStore} from '../stores/app'
 import SectionTitle from '../components/SectionTitle.vue'
 import UiState from '../components/UiState.vue'
 import PaginationBar from '../components/PaginationBar.vue'
 import BaseModal from '../components/BaseModal.vue'
 
+const app = useAppStore()
 const rows = ref<any[]>([]), selected = ref<any>(null), loading = ref(false), error = ref(''), total = ref(0),
     page = ref(1), pageSize = 9, search = ref(''), stage = ref(''), industry = ref(''), editing = ref(false), saving = ref(false), confirmDelete = ref(false)
 const projectForm = ref<any>({})
@@ -91,7 +93,7 @@ async function deleteProject() {
     <div class="projects-heading">
       <div><h2>Портфель проектов</h2>
         <p>Найдено: {{ total.toLocaleString('ru-RU') }}</p></div>
-      <div class="toolbar-actions"><button class="btn btn-primary btn-sm" @click="openCreate"><Plus :size="15"/> Проект</button><span class="subtle-label">Карточный вид</span></div></div>
+      <div class="toolbar-actions"><button class="btn btn-secondary btn-sm" @click="downloadCsv('projects').then(()=>app.notify('Экспорт проектов скачан')).catch((e:any)=>app.notify(e.userMessage || 'Ошибка экспорта'))"><Download :size="15"/> CSV</button><button class="btn btn-primary btn-sm" @click="openCreate"><Plus :size="15"/> Проект</button><span class="subtle-label">Карточный вид</span></div></div>
     <UiState :loading="loading" :error="error" :empty="!rows.length"
              empty-text="Проекты не найдены. Попробуйте изменить фильтры." @retry="load">
       <div class="projects-grid">
